@@ -43,7 +43,6 @@ document.addEventListener('DOMContentLoaded', function() {
         attachRegisterEvent();
     });
 
-
     document.getElementById('loginBtn').addEventListener('click', loginFormShow);
 
     function loginFormShow() {
@@ -105,6 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div id="post-data"></div>
             </div>
         `;
+        attachCreatePostEvent(); // Исправлено: добавлено присоединение события для создания поста
     });
 
     document.getElementById('viewPostsBtn').addEventListener('click', function() {
@@ -128,6 +128,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function attachRegisterEvent() {
     const form = document.getElementById('register-form');
     form.addEventListener('submit', async function(event) {
+        event.preventDefault(); // Исправлено: предотвращение отправки формы по умолчанию
         const name = document.getElementById('name').value;
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
@@ -137,6 +138,7 @@ function attachRegisterEvent() {
             const response = await fetch('http://127.0.0.1:8000/api/register', {
                 method: 'POST',
                 headers: {
+                    'Accept': 'application/json',
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
@@ -159,7 +161,7 @@ function attachRegisterEvent() {
 function attachLoginEvent() {
     const form = document.getElementById('login-form');
     form.addEventListener('submit', async function(event) {
-        event.preventDefault();
+        event.preventDefault(); // Исправлено: предотвращение отправки формы по умолчанию
 
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
@@ -168,6 +170,7 @@ function attachLoginEvent() {
             const response = await fetch('http://127.0.0.1:8000/api/login', {
                 method: 'POST',
                 headers: {
+                    'Accept': 'application/json',
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
@@ -199,7 +202,7 @@ function attachLoginEvent() {
 function attachCreatePostEvent() {
     const postForm = document.getElementById('create-post-form');
     postForm.addEventListener('submit', async function(event) {
-        event.preventDefault();
+        event.preventDefault(); // Исправлено: предотвращение отправки формы по умолчанию
 
         let token = localStorage.getItem('api_token') || document.getElementById('create-token').value;
 
@@ -235,61 +238,32 @@ async function fetchAllPosts(token) {
         const response = await fetch('http://127.0.0.1:8000/api/posts', {
             method: 'GET',
             headers: {
-                'Content-Type': 'application/json'
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`
             }
         });
 
-        const posts = await response.json();
-
+        const data = await response.json();
         if (response.ok) {
             const postsContainer = document.getElementById('user-posts');
-            postsContainer.innerHTML = '';
-            posts.forEach(post => {
-                postsContainer.innerHTML += `
-                    <div class="post">
-                        <p><strong>Title:</strong> ${post.title}</p>
-                        <p><strong>Body:</strong> ${post.body}</p>
-                        <button class="delete-post-btn" data-id="${post.id}">Delete</button>
-                    </div>
-                `;
-            });
+            postsContainer.innerHTML = ''; // Очистить содержимое перед отображением новых данных
 
-            document.querySelectorAll('.delete-post-btn').forEach(button => {
-                button.addEventListener('click', async function() {
-                    const postId = this.getAttribute('data-id');
-                    await deletePost(postId, token);
-                    fetchAllPosts(token);
-                });
+            data.forEach(post => {
+                const postElement = document.createElement('div');
+                postElement.classList.add('post');
+                postElement.innerHTML = `<h3>${post.title}</h3><p>${post.body}</p>`;
+                postsContainer.appendChild(postElement);
             });
         } else {
-            document.getElementById('user-posts').innerHTML = `<p>Failed to fetch posts. ${posts.message}</p>`;
+            document.getElementById('user-posts').innerHTML = `<p>Failed to fetch posts: ${data.message}</p>`;
         }
     } catch (error) {
         console.error('Error fetching posts:', error);
     }
 }
 
-async function deletePost(postId, token) {
-    try {
-        const response = await fetch(`http://127.0.0.1:8000/api/posts/${postId}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (response.ok) {
-            alert('Post deleted successfully!');
-        } else {
-            alert('Failed to delete post.');
-        }
-    } catch (error) {
-        console.error('Error deleting post:', error);
-    }
-}
-
 function logout() {
+    localStorage.removeItem('api_token'); // Удаление токена при выходе
     document.getElementById('getUserBtn').style.display = 'none';
     document.getElementById('createPostBtn').style.display = 'none';
     document.getElementById('viewPostsBtn').style.display = 'none';
@@ -298,5 +272,5 @@ function logout() {
     document.getElementById('registerBtn').style.display = 'inline-block';
     document.getElementById('loginBtn').style.display = 'inline-block';
 
-    document.getElementById('login-response').innerText = 'You have logged out.';
+    document.getElementById('content').innerHTML = '<p>You have logged out.</p>';
 }
